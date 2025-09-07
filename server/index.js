@@ -6,7 +6,11 @@ const pool = require('./config/db');
 const authroutes = require('./routes/Auth');
 const updateroutes = require('./routes/ProfileUpdates');
 const interviewroutes = require('./routes/InterviewService');
+const dotenv = require('dotenv');
+const mailRoutes = require('./routes/mailRoutes');
 
+dotenv.config();
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -14,6 +18,8 @@ app.use(cors());
 app.use('/api',authroutes)
 app.use('/api/updates', updateroutes);
 app.use('/api/interviews', interviewroutes);
+app.use('/api/mail', mailRoutes);
+
 app.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users');

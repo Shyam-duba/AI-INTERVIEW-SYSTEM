@@ -1,221 +1,233 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send } from 'lucide-react';
-import ChatMessage from '../components/ui/ChatMessage';
-import Header from '../components/ui/Header';
+import React, { use, useState } from 'react';
+import axios from 'axios';
+import { AlertTriangle, X } from 'lucide-react';
+import ChatInterface from '../components/ChatInterface';
+import SessionHeader from '../components/SessionHeader';
+import { useNavigate, useParams } from "react-router-dom"; 
 
-function Interview() {
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const chatContainerRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const recognitionRef = useRef(null);
-  
-  useEffect(() => {
-    setMessages([
-      {
-        id: 1,
-        text: "Hello! I'm Sarah, your interviewer. I'll be asking you questions about your experience and skills. You can either type your responses or use the microphone to record them. Let's begin: Could you tell me about your background and what brings you here today?",
-        sender: 'ai',
-        timestamp: new Date()
-      }
-    ]);
 
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
+const InterviewPage = () => {
+  const navigate = useNavigate();
+  const {id} = useParams();
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      type: 'text',
+      content: 'Welcome to your interview session! Please introduce yourself.',
+      role: 'assistant',
+      timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+    },
+  ]);
 
-      recognitionRef.current.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('');
-        setInputMessage(transcript);
-      };
-    }
-  }, []);
+  const [sessionStartTime] = useState(new Date());
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (isRecording) {
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      setRecordingTime(0);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isRecording]);
-
-  const handleSendMessage = () => {
-    if (inputMessage.trim() === '') return;
-    
-    const newUserMessage = {
-      id: messages.length + 1,
-      text: inputMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, newUserMessage]);
-    setInputMessage('');
-    
-    setTimeout(() => {
-      const aiResponses = [
-        "Thank you for sharing that. Could you elaborate on a challenging project you've worked on recently?",
-        "That's interesting. How do you typically handle stressful situations at work?",
-        "Could you tell me about a time when you had to demonstrate leadership?",
-        "What would you say is your greatest professional achievement?",
-        "How do you approach problem-solving in your work?"
-      ];
-      
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-      
-      const newAiMessage = {
-        id: messages.length + 2,
-        text: randomResponse,
-        sender: 'ai',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, newAiMessage]);
-    }, 1500);
-  };
-
-  const startRecording = async () => {
+  const get_ai_response = async (messages) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      // convert messages into history format
+      const history = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      if (recognitionRef.current) {
-        recognitionRef.current.start();
-      }
+      // last user query
+      const lastMessage = history[history.length - 1];
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      const payload = {
+        history: history.slice(0, -1), // all except last
+        query: lastMessage.content,    // current query
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
+      const res = await axios.post(
+        "http://localhost:5000/api/interview/get_respone", // replace with your backend endpoint
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            // Authorization: `Bearer ${yourToken}`, // if JWT is required
+          },
+        }
+      );
+
+      console.log("AI Response Data:", res.data); // Debug log
+
+      if (res.data && res.data.response) {
+        const aiMessage = {
+          id: Date.now().toString(),
+          type: "text",
+          content: res.data.response,
+          role: "assistant",
+          timestamp: new Date(),
+        };
+        console.log("AI Response:", aiMessage); 
+        setMessages((prev) => [...prev, aiMessage]);
+      }
     } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("Please enable microphone access to continue with the interview.");
+      console.error("Error fetching AI response:", err);
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
+  const addMessage = (message) => {
+    const newMessage = {
+      ...message,
+      id: Date.now().toString(),
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+
+    console.log("New Message Added:", newMessage);
+    
+    if (message.role === "user") {
+      console.log("user",message.role);
+      get_ai_response([...messages, newMessage]);
+      console.log("AI response triggered");
+    }
+  };
+
+  const save_reports = async (report, history) =>{
+    const token = localStorage.getItem('token');
+    // Save the report using the id and history
+
+    const payload = {
+      interview_id: id,
+      history: history,
+      report: report
+    };
+
+    try {
+      const res = await axios.post(
+        "http://localhost:3000/api/interviews/end-interview", // replace with your backend endpoint
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // if JWT is required
+          },
+        }
+      )
+
+      console.log("Report saved successfully:", res.data);
+    }
+    catch(err){
+      console.log("Error saving report:", err);
+      console.log(err);
+    }
+  }
+
+  const generate_report = async (history) =>{
+    const payload = {
+      history: history 
+    }
+
+    const res = await axios.post(
+        "http://localhost:5000/api/interview/get_report", // replace with your backend endpoint
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            // Authorization: `Bearer ${yourToken}`, // if JWT is required
+          },
+        }
+      );
+      console.log("Report Data:", res.data); // Debug log
+      if (res.data) {
+        console.log("Report Response:", res.data); 
       
-      if (inputMessage.trim()) {
-        handleSendMessage();
+        await save_reports(res.data, history);
+
+        navigate(`/reports/${id}`, { state: { report: res.data } });
       }
-    }
+  }
+
+  const handleEndSession = () => {
+    setShowEndConfirmation(true);
+
+  
+    
+
   };
 
-  const toggleRecording = () => {
-    if (!isRecording) {
-      startRecording();
-    } else {
-      stopRecording();
-    }
+  const confirmEndSession = () => {
+    // Add your end session logic here
+    // This could include:
+    // - Saving the session data
+    // - Navigating to a results page
+    // - Cleaning up resources
+    // - API call to end the session
+    
+    console.log('Session ended');
+    
+    // For now, we'll just close the confirmation
+    setShowEndConfirmation(false);
+    const history = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+    generate_report(history);
+    // Example: Navigate to results or home page
+    // window.location.href = '/results';
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const cancelEndSession = () => {
+    setShowEndConfirmation(false);
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header title="AI Interview" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+      <SessionHeader startTime={sessionStartTime} />
       
-      <div className="flex-1 flex bg-[url('https://images.pexels.com/photos/5668858/pexels-photo-5668858.jpeg?auto=compress&cs=tinysrgb&w=1920')] bg-cover bg-center bg-no-repeat">
-        <div className="flex-1 backdrop-blur-sm bg-gray-900/90">
-          <div 
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full h-full"
-          >
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message.text}
-                sender={message.sender}
-                timestamp={message.timestamp}
-              />
-            ))}
+      {/* End Session Button */}
+      <div className="flex justify-end px-4 py-2">
+        <button
+          onClick={handleEndSession}
+          className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <X size={18} />
+          End Interview
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 pb-4">
+        <ChatInterface messages={messages} onAddMessage={addMessage} />
+      </div>
+
+      {/* End Session Confirmation Modal */}
+      {showEndConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">End Interview Session</h3>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to end this interview session? Your progress will be saved, but you won't be able to continue this conversation.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelEndSession}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEndSession}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+              >
+                End Session
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="border-t border-gray-700 bg-gray-800 p-4 shadow-lg">
-        <div className="flex items-center space-x-4 max-w-3xl mx-auto">
-          <button 
-            onClick={toggleRecording}
-            className={`p-4 rounded-full transition-all duration-200 ${
-              isRecording 
-                ? 'bg-red-500 text-white animate-pulse scale-110' 
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-            }`}
-          >
-            {isRecording ? <Mic size={24} /> : <MicOff size={24} />}
-          </button>
-
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type your response..."
-            className="flex-1 border border-gray-600 rounded-full px-4 py-2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          
-          <button
-            onClick={handleSendMessage}
-            disabled={inputMessage.trim() === ''}
-            className={`p-4 rounded-full transition-all duration-200 ${
-              inputMessage.trim() === '' 
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-            }`}
-          >
-            <Send size={20} />
-          </button>
-        </div>
-        <p className="text-center text-sm text-gray-400 mt-2">
-          {isRecording 
-            ? `Recording... ${formatTime(recordingTime)}` 
-            : 'Click the microphone to start recording or type your response'}
-        </p>
-      </div>
+      )}
     </div>
   );
-}
+};
 
-export default Interview;
+export default InterviewPage;

@@ -17,6 +17,7 @@ export default function Register() {
       const response = await axios.post("http://localhost:3000/api/register/", {
         name: name,  // Ensure this matches Django's User model fields
         password: password,
+        email: email,
       }, {
         headers: {
           "Content-Type": "application/json",

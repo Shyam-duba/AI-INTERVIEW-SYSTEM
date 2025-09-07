@@ -123,7 +123,7 @@ useEffect(() => {
                 <UserSquare2 className="w-5 h-5" />
                 <span>Learn with Coach</span>
               </Link>
-              <Link to="/resumeAnalyzer" className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#F4EFCA]/80 hover:bg-[#F4EFCA]/10 transition-colors">
+              <Link to="/resume-analyzer" className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#F4EFCA]/80 hover:bg-[#F4EFCA]/10 transition-colors">
                 <FileText className="w-5 h-5" />
                 <span>Resume Analyzer</span>
               </Link>

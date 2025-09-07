@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   const { name, email, password } = req.body;
 
   if (!email || !name || !password) {
@@ -20,6 +20,8 @@ router.post("/register", async (req, res) => {
   const newUser = await addUser(name, email, password);
   // const token = generateToken(newUser);
 
+  console.log(newUser);
+
   res.status(201).json({ message: "User registered", user: newUser });
 });
 
@@ -27,6 +29,8 @@ router.post("/login", async (req, res) => {
   const { name, password } = req.body;
 
   const user = await findUserByUsername(name);
+
+  console.log(user);
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }

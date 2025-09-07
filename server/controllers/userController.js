@@ -14,6 +14,7 @@ const addUser = async (username, email, password) => {
 // Find user by username
 const findUserByUsername = async (username) => {
   const result = await pool.query('SELECT * FROM users WHERE name = $1', [username]);
+  console.log(result.rows[0])
   return result.rows[0];
 };
 const findUserById = async (id) =>{
@@ -40,5 +41,45 @@ const updateUserDetails = async (name, email, old_name) => {
   return result.rows[0];
 };
 
+const getReportById = async (req, res) =>{
+  console.log("Fetching report by ID");
+  const { id } = req.body; // Assuming report ID is passed as a query parameter
+  console.log(id)
+  const result = await pool.query("SELECT report FROM reports WHERE interview_id = $1", [id]);
+res.json(result.rows[0]);   // ✅ just the report object
 
-module.exports = { addUser, findUserByUsername,updateUserDetails, findUserById, addInterview };
+}
+const endInterview = async (req, res) => {
+    try {
+        const { interview_id, report, history } = req.body;
+
+        console.log("Ending interview with data:", { interview_id, report, history });
+        if (!interview_id || !report || !history) {
+            return res.status(400).json({ message: "Missing required fields" });
+        }
+
+
+        const historyJson = JSON.stringify(history);
+
+        // Insert new interview record
+        const result = await pool.query(
+            `INSERT INTO reports (interview_id, report, history)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [interview_id, report, historyJson]
+        );
+
+        res.status(200).json({
+            message: "Interview data saved successfully",
+            interview: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Error saving interview:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+
+module.exports = { addUser, findUserByUsername,updateUserDetails, findUserById, addInterview, endInterview, getReportById};

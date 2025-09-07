@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { authMiddleware } = require("../middlewaare/AuthMiddleware");
-const {addInterview} = require("../controllers/userController")
+const {addInterview, endInterview, getReportById} = require("../controllers/userController")
 
 /*
 GET /api/<>-interview
@@ -29,8 +29,8 @@ router.post("/start-interview", authMiddleware, (req, res) => {
 /*
 GET /api/end-interview
 */
-router.get("/end-interview", (req, res) => {
+router.post("/end-interview", authMiddleware, endInterview);
 
-});
 
+router.post("/get-report", getReportById);
 module.exports = router;
