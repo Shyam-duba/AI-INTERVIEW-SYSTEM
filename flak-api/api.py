@@ -17,7 +17,7 @@ llm = ChatGroq(
     temperature=0,
     max_tokens=None,
     timeout=None,
-    api_key="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",
+    api_key="",
 )
 
 app = Flask(__name__)
