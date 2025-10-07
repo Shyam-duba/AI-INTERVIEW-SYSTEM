@@ -84,35 +84,81 @@ const InterviewPage = () => {
     }
   };
 
-  const save_reports = async (report, history) =>{
-    const token = localStorage.getItem('token');
-    // Save the report using the id and history
+const save_reports = async (report, history) => {
+  const token = localStorage.getItem("token");
 
-    const payload = {
-      interview_id: id,
-      history: history,
-      report: report
+  const payload = {
+    interview_id: id,
+    history: history,
+    report: report,
+  };
+
+  try {
+    // 1️⃣ End Interview API
+    const res = await axios.post(
+      "http://localhost:3000/api/interviews/end-interview",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("Report saved successfully:", res.data);
+
+    // Format report + history for mail
+    const formattedHistory = history
+      .map((msg, i) => `${i + 1}. [${msg.role}] ${msg.content}`)
+      .join("\n");
+
+    const mailPayload = {
+      to: "22501a4407@pvpsit.ac.in",
+      subject: `Interview Report - Session ${id}`,
+      text: `
+Interview Report:
+
+${JSON.stringify(report, null, 2)}
+
+Conversation History:
+${formattedHistory}
+      `,
+      html: `
+        <h2>Interview Report - Session ${id}</h2>
+        <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">
+${JSON.stringify(report, null, 2)}
+        </pre>
+        <h3>Conversation History:</h3>
+        <ul>
+          ${history
+            .map(
+              (msg) =>
+                `<li><b>${msg.role}:</b> ${msg.content}</li>`
+            )
+            .join("")}
+        </ul>
+      `,
     };
 
-    try {
-      const res = await axios.post(
-        "http://localhost:3000/api/interviews/end-interview", // replace with your backend endpoint
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // if JWT is required
-          },
-        }
-      )
+    // 2️⃣ Mail Send API
+    const mailRes = await axios.post(
+      "http://localhost:3000/api/mail/send",
+      mailPayload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-      console.log("Report saved successfully:", res.data);
-    }
-    catch(err){
-      console.log("Error saving report:", err);
-      console.log(err);
-    }
+    console.log("Mail sent successfully:", mailRes.data);
+  } catch (err) {
+    console.log("Error saving report or sending mail:", err);
   }
+};
+
+
 
   const generate_report = async (history) =>{
     const payload = {

@@ -5,3 +5,7 @@ const { sendMailController } = require('../controllers/mailController');
 router.post('/send', sendMailController);
 
 module.exports = router;
+
+
+
+// http://localhost:3000/api/mail/send

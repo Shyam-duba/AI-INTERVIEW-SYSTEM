@@ -10,7 +10,7 @@ import EditProfile from './pages/EditProfile'
 import StartInterview from './pages/StartInterview'
 import ResumeAnalyzer from './pages/ResumeAnalyzer'
 import ReportsPage from './pages/ReportsPage'
-
+import ChatWindow from './pages/Coach'
 
 function Logout() {
   localStorage.clear()
@@ -43,6 +43,7 @@ function App() {
         <Route path='/edit-profile' element={<EditProfile />}/>
         <Route path='/resume-analyzer' element={<ResumeAnalyzer />}/>
         <Route path='/reports/:id' element={<ReportsPage />}/>
+        <Route path='/coach' element={<ChatWindow />}/>
         {/* <Route path='/interview' element={<Chat />}/> */}
         <Route path='*' element={<NotFound />}/>
       </Routes>

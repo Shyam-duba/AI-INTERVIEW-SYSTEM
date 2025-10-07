@@ -13,6 +13,7 @@ exports.sendMailController = async (req, res) => {
 
     try {
         const info = await sendMail(mailOptions);
+        console.log('Email sent: ', info);
         res.status(200).json({ message: 'Email sent successfully', info });
     } catch (error) {
         res.status(500).json({ message: 'Failed to send email', error: error.message });
