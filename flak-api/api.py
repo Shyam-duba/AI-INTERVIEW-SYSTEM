@@ -46,7 +46,7 @@ llm = ChatGroq(
     temperature=0,
     max_tokens=None,
     timeout=None,
-    api_key="your_api_key",
+    api_key=os.getenv("GROQ_API_KEY"),
 )
 
 app = Flask(__name__)
@@ -185,7 +185,7 @@ def prompt_node(state: AgentState):
     # Just forwards the user question
     return {"question": state["question"]}
 
-agent = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key="your_api_key")
+agent = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=os.getenv("GROQ_API_KEY"))
 
 enhancer_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a prompt enhancer. Given a question and context, rewrite it as a clearer, richer prompt for tool use."),
